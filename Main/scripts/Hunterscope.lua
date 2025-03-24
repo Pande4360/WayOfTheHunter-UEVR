@@ -7,11 +7,12 @@
 --Camera Manager ll. 116
 --ScopeMesh or location as to where to attach scope, ll 378
 --
+require("Trackers")
 local api = uevr.api
 local vr = uevr.params.vr
 
-local emissive_material_amplifier = 4.0 
-local fov = 2.0
+local emissive_material_amplifier = 2.0 
+local fov = 90.0
 
 -- Static variables
 local emissive_mesh_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"
@@ -242,7 +243,8 @@ local function spawn_scope_plane(world, owner, pos, rt)
     end
     wanted_mat:set_property("BlendMode", 0)
 	wanted_mat:set_property("TwoSided", false)
-    --     wanted_mat.bDisableDepthTest = true
+	wanted_mat:set_property("ShadingModel", 0 )
+         wanted_mat.bDisableDepthTest = true
     --     --wanted_mat.MaterialDomain = 0
     --     --wanted_mat.ShadingModel = 0
 
@@ -315,10 +317,10 @@ local function spawn_reticle_plane(world, owner, pos, tex)
     dynamic_material:SetTextureParameterValue("LinearColor", wanted_tex)
 	--dynamic_material.Opacity:SetTextureParameterValue("LinearColor", wanted_tex)
     local color = StructObject.new(flinearColor_c)
-    color.R = 0.1
-    color.G = 0.1
-    color.B = 0.1
-    color.A = 0.1
+    color.R = 2
+    color.G = 2
+    color.B = 2
+    color.A = 2
     dynamic_material:SetVectorParameterValue("Color", color)
     reticle_plane_component = local_reticle_mesh
 end
@@ -450,7 +452,7 @@ local function attach_components_to_weapon(weapon_mesh)
         )
         scope_plane_component:K2_SetRelativeRotation(temp_vec3:set(0, 90, 90), false, reusable_hit_result, false)
         scope_plane_component:K2_SetRelativeLocation(temp_vec3:set(-14.22, 0,0 ), false, reusable_hit_result, false)
-        scope_plane_component:SetWorldScale3D(temp_vec3:set(0.025,0.025, 0.00001))
+        scope_plane_component:SetWorldScale3D(temp_vec3:set(0.03,0.03, 0.00001))
         scope_plane_component:SetVisibility(false)
     end
 	if reticle_plane_component then
@@ -470,7 +472,7 @@ local function attach_components_to_weapon(weapon_mesh)
         )
 		reticle_plane_component:K2_SetRelativeRotation(temp_vec3:set(0, 90, 90), false, reusable_hit_result, false)
         reticle_plane_component:K2_SetRelativeLocation(temp_vec3:set(-14.4, 0, 0), false, reusable_hit_result, false)
-        reticle_plane_component:SetWorldScale3D(temp_vec3:set(0.025,0.025, 0.00001))
+        reticle_plane_component:SetWorldScale3D(temp_vec3:set(0.03,0.03, 0.00001))
         reticle_plane_component:SetVisibility(false)
     end
 end
@@ -503,7 +505,9 @@ local function switch_scope_state(pawn)
     end
 	if reticle_plane_component ~=nil then
 		reticle_plane_component:SetVisibility(current_scope_state)
+	--	pawn:GetCurrentArm().m_attachments[2].FP_Lens_Back:SetVisibility(not current_scope_state)
 	end
+	
 end
 
 -- Initialize static objects when the script loads
@@ -513,6 +517,33 @@ end
 
 local current_weapon = nil
 local last_level = nil
+
+
+
+--ReDo proper FOV CHANGE based on eye to scope distance
+local function Get_ScopeHmdDistance()
+	local scope_plane_position = scope_plane_component:K2_GetComponentLocation()
+	local hmdPos = hmd_component:K2_GetComponentLocation()
+	local Diff= math.sqrt((hmdPos.x-scope_plane_position.x)^2+(hmdPos.y-scope_plane_position.y)^2+(hmdPos.z-scope_plane_position.z)^2)
+	if Diff <=2.5 then
+		Diff=2.5
+	end
+	return Diff
+end
+local function Get_CurrentScopeFOV(c_pawn)
+	local CurrentFOVVal
+	if c_pawn ~=nil then
+		if	c_pawn:GetCurrentArm() ~=nil then		
+				CurrentFOVVal=c_pawn:GetCurrentArm().m_attachments[2].CurrentFOV
+		end
+	end
+	return CurrentFOVVal
+end
+
+local function Recalculate_FOV(c_pawn)	
+		fov= Get_CurrentScopeFOV(c_pawn)* (2* math.atan(2.5/Get_ScopeHmdDistance())/(math.pi/2))		
+		scene_capture_component.FOVAngle = fov
+end
 
 uevr.sdk.callbacks.on_pre_engine_tick(
 	function(engine, delta)
@@ -572,6 +603,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             end
         end
         switch_scope_state(c_pawn)
+		Recalculate_FOV(c_pawn)
 	--	fov= 1/(0.2*((c_pawn:GetCurrentArm().m_attachments[2].ZoomLevelIndex)+1))
 	--	
 	--	scene_capture_component.FOVAngle = fov
