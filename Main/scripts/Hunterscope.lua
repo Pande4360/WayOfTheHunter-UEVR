@@ -550,6 +550,21 @@ local function Recalculate_FOV(c_pawn)
 		scene_capture_component.FOVAngle = fov
 end
 
+local function AdjustSceneComponentAngle(c_pawn)
+	local ReturnAngle
+	if c_pawn ~=nil then
+		if	c_pawn:GetCurrentArm() ~=nil then		
+				local RearsightX=c_pawn:GetCurrentArm().m_attachments[2].m_rearFixedPointOffset.X
+				local FrontsightX=c_pawn:GetCurrentArm().m_attachments[2].m_frontFixedPointOffset.X
+				local RearZ = c_pawn:GetCurrentArm().m_attachments[2].m_rearFixedPointOffset.z 
+				local FrontZ= c_pawn:GetCurrentArm().m_attachments[2].m_frontFixedPointOffset.z
+				ReturnAngle=math.atan((RearZ-FrontZ)/(RearsightX-FrontsightX))
+		end
+	end
+	scene_capture_component:K2_SetRelativeRotation(temp_vec3:set(ReturnAngle*180/math.pi, 0, 90), false, reusable_hit_result, false)
+end
+	
+
 uevr.sdk.callbacks.on_pre_engine_tick(
 	function(engine, delta)
 	
@@ -609,6 +624,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
         end
         switch_scope_state(c_pawn)
 		Recalculate_FOV(c_pawn)
+		AdjustSceneComponentAngle(c_pawn)
 	--	fov= 1/(0.2*((c_pawn:GetCurrentArm().m_attachments[2].ZoomLevelIndex)+1))
 	--	
 	--	scene_capture_component.FOVAngle = fov
