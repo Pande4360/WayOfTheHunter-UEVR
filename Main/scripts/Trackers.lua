@@ -1,38 +1,16 @@
+require("UEHelper")
 	local api = uevr.api
 	
 	local params = uevr.params
 	local callbacks = params.sdk.callbacks
 	local pawn = api:get_local_pawn(0)
 	--local vr=uevr.params.vr
-local function find_required_object(name)
-    local obj = uevr.api:find_uobject(name)
-    if not obj then
-        error("Cannot find " .. name)
-        return nil
-    end
 
-    return obj
-end
-local find_static_class = function(name)
-    local c = find_required_object(name)
-    return c:get_class_default_object()
-end
 local kismet_string_library = find_static_class("Class /Script/Engine.KismetStringLibrary")
 local kismet_math_library = find_static_class("Class /Script/Engine.KismetMathLibrary")
 local kismet_system_library = find_static_class("Class /Script/Engine.KismetSystemLibrary")
 local Statics = find_static_class("Class /Script/Engine.GameplayStatics")
-function isButtonPressed(state, button)
-	return state.Gamepad.wButtons & button ~= 0
-end
-function isButtonNotPressed(state, button)
-	return state.Gamepad.wButtons & button == 0
-end
-function pressButton(state, button)
-	state.Gamepad.wButtons = state.Gamepad.wButtons | button
-end
-function unpressButton(state, button)
-	state.Gamepad.wButtons = state.Gamepad.wButtons & ~(button)
-end
+
 
 local lControllerIndex= 1
 local rControllerIndex= 2

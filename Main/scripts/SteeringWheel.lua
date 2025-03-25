@@ -1,5 +1,5 @@
 require("UEHelper")
-
+require("CONFIG")
 local api = uevr.api
 local vr = uevr.params.vr
 
@@ -67,13 +67,7 @@ end
 
 --XINPUT functions
 
-
-
-
-
-uevr.sdk.callbacks.on_xinput_get_state(
-function(retval, user_index, state)
-
+local function UpdateInput(state)
 
 --Read Gamepad stick input 
 	ThumbLX = state.Gamepad.sThumbLX
@@ -90,30 +84,44 @@ function(retval, user_index, state)
 	Bbutton  = isButtonPressed(state, XINPUT_GAMEPAD_B)
 	Xbutton  = isButtonPressed(state, XINPUT_GAMEPAD_X)
 	Ybutton  = isButtonPressed(state, XINPUT_GAMEPAD_Y)
+end
 
+local function Drive(state)
+	if isDriving then
+		--state.Gamepad.sThumbLX = 0
+		--state.Gamepad.sThumbRX = 0
+	
+		if ActiveHandState == 1 then
+			local DiffAngleRight= CurrentHandRoll_Right-StartRoll_Right
+			CurrentSteerVal= LastSteerVal+DiffAngleRight
+			
+		elseif ActiveHandState ==2 then
+			local DiffAngleLeft= CurrentHandRoll_Left-StartRoll_Left
+			CurrentSteerVal= LastSteerVal+DiffAngleLeft
+		elseif ActiveHandState==0 then
+			CurrentSteerVal = 0
+		end
+		if CurrentSteerVal>90 then
+			CurrentSteerVal=90 
+		end
+		if CurrentSteerVal<-90 then
+			CurrentSteerVal=-90 
+		end
+		state.Gamepad.sThumbLX = 32767/90*CurrentSteerVal
+	end	
+end
+
+uevr.sdk.callbacks.on_xinput_get_state(
+function(retval, user_index, state)
+
+
+--Read Gamepad stick input 
+if isDriving and PhysicalDriving then
 --INPUT OVerrides:	
-if isDriving then
-	--state.Gamepad.sThumbLX = 0
-	--state.Gamepad.sThumbRX = 0
 
-	if ActiveHandState == 1 then
-		local DiffAngleRight= CurrentHandRoll_Right-StartRoll_Right
-		CurrentSteerVal= LastSteerVal+DiffAngleRight
-		
-	elseif ActiveHandState ==2 then
-		local DiffAngleLeft= CurrentHandRoll_Left-StartRoll_Left
-		CurrentSteerVal= LastSteerVal+DiffAngleLeft
-	elseif ActiveHandState==0 then
-		CurrentSteerVal = 0
-	end
-	if CurrentSteerVal>90 then
-		CurrentSteerVal=90 
-	end
-    if CurrentSteerVal<-90 then
-		CurrentSteerVal=-90 
-	end
-	state.Gamepad.sThumbLX = 32767/90*CurrentSteerVal
-end	
+	Drive(state)
+end
+
 end)
 
 
@@ -130,12 +138,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
 	end
 	
 	pawn=api:get_local_pawn(0)
-	if pawn.AdjustedSteeringInput ~=nil then
-		isDriving=true
-		uevr.params.vr.set_mod_value("VR_AimMethod" , "0")
-	else isDriving=false
-		uevr.params.vr.set_mod_value("VR_AimMethod" , "2")
-	end
+
 	--print(isDriving)
 UpdateHandState()
 

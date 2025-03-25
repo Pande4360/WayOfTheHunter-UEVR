@@ -18,6 +18,13 @@ local fov = 30.0
 local emissive_mesh_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"
 local reticle_mesh_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"--"MaterialInstanceConstant /Game/TEH/Gear/Sights/Scope01/PPI_Scope01_Sight.PPI_Scope01_Sight"
 local sightTexture_name = "Texture2D /Game/TEH/Gear/Sights/Scope01/T_Scope01_Reticle_KEX.T_Scope01_Reticle_KEX"
+local sightTexture_name2= "Texture2D /Game/TEH/Gear/Sights/Scope02/T_Scope02_Reticle_KEX.T_Scope02_Reticle_KEX"
+local sightTexture_name3= "Texture2D /Game/TEH/Gear/Sights/Scope03/T_Scope03_Reticle_KEX.T_Scope03_Reticle_KEX"
+local sightTexture_name4= "Texture2D /Game/TEH/Gear/Sights/Scope04/T_Scope04_Reticle_KEX.T_Scope04_Reticle_KEX"
+local sightTexture_name5= "Texture2D /Game/TEH/Gear/Sights/Scope05/T_Scope05_Reticle_KEX.T_Scope05_Reticle_KEX"
+local sightTexture_name6= "Texture2D /Game/TEH/Gear/Sights/Scope06/T_Scope06_Reticle_KEX.T_Scope06_Reticle_KEX"
+local CurrentScope=nil
+local dynamic_materialReticle=nil
 local ftransform_c = nil
 local flinearColor_c = nil
 local hitresult_c = nil
@@ -209,6 +216,15 @@ local function get_scope_mesh(parent_mesh)
 
     return nil
 end
+local function Get_Scope_Object(parent_Obj)
+	if not parent_Obj then return nil end
+	local child_Obj_array= parent_Obj.m_attachments
+	local CurrentScopeObj= SearchSubObjectArrayForObject(child_Obj_array, "Scope")
+	if CurrentScopeObj~=nil then
+		return CurrentScopeObj
+	end
+end
+
 
 
 local function get_equipped_weapon(pawn)
@@ -311,17 +327,18 @@ local function spawn_reticle_plane(world, owner, pos, tex)
         print("Failed to find Reticle Texture2D")
         return
     end
-    local dynamic_material = local_reticle_mesh:CreateDynamicMaterialInstance(0, wanted_mat, "ReticleMaterial")
+    dynamic_materialReticle = local_reticle_mesh:CreateDynamicMaterialInstance(0, wanted_mat, "ReticleMaterial")
 	--local dynamic_texture = wanted_tex:CreateTransient(100,100
 
-    dynamic_material:SetTextureParameterValue("LinearColor", wanted_tex)
+	CurrentScope=Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm())
+    dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
 	--dynamic_material.Opacity:SetTextureParameterValue("LinearColor", wanted_tex)
     local color = StructObject.new(flinearColor_c)
     color.R = 2
     color.G = 2
     color.B = 2
     color.A = 2
-    dynamic_material:SetVectorParameterValue("Color", color)
+    dynamic_materialReticle:SetVectorParameterValue("Color", color)
     reticle_plane_component = local_reticle_mesh
 end
 -- local function create_emissive_mat(component, materialSocketName)
@@ -341,6 +358,7 @@ end
 --     material.BlendMode = 0
 --     -- dynamic_material:SetTextureParameterValue("LinearColor", render_target)
 -- end
+
 
 local function spawn_scene_capture_component(world, owner, pos, fov, rt)
     scene_capture_component = scope_actor:AddComponentByClass(scene_capture_component_c, false, zero_transform, false)
@@ -436,7 +454,7 @@ local function attach_components_to_weapon(weapon_mesh)
     -- Attach plane to weapon
     if scope_plane_component then
 		
-       scope_mesh = api:get_local_pawn(0):GetCurrentArm().m_attachments[2].FP_Scope--get_scope_mesh(weapon_mesh)
+       scope_mesh = Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).FP_Scope--get_scope_mesh(weapon_mesh)
         if scope_mesh == nil then
             print("Failed to find scope mesh")
             return
@@ -456,7 +474,7 @@ local function attach_components_to_weapon(weapon_mesh)
         scope_plane_component:SetVisibility(false)
     end
 	if reticle_plane_component then
-        scope_mesh = api:get_local_pawn(0):GetCurrentArm().m_attachments[2].FP_Scope--get_scope_mesh(weapon_mesh)
+        scope_mesh = Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).FP_Scope--get_scope_mesh(weapon_mesh)
         if scope_mesh == nil then
             print("Failed to find scope mesh")
             return
@@ -510,6 +528,25 @@ local function switch_scope_state(pawn)
 	
 end
 
+local function UpdateReticleTexture()
+	if Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()) ~= CurrentScope then
+		CurrentScope=Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm())
+		if string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope01") then
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name)
+		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope02") then
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name2)
+		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope03") then
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name3)
+		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope04") then
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name4)
+		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope05") then
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name5)
+		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope06") then
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name6)
+		end
+	end
+	
+end
 -- Initialize static objects when the script loads
 if not init_static_objects() then
     print("Failed to initialize static objects")
@@ -534,7 +571,7 @@ local function Get_CurrentScopeFOV(c_pawn)
 	local CurrentFOVVal
 	if c_pawn ~=nil then
 		if	c_pawn:GetCurrentArm() ~=nil then		
-				CurrentFOVVal=c_pawn:GetCurrentArm().m_attachments[2].CurrentFOV
+				CurrentFOVVal=Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).CurrentFOV
 		end
 	end
 	return CurrentFOVVal
@@ -546,7 +583,7 @@ local function Recalculate_FOV(c_pawn)
 	else 
 		fov= 30*(Get_CurrentScopeFOV(c_pawn)* (2* math.atan(2.5/Get_ScopeHmdDistance())/(90/180*math.pi)))/(94-(5.5-Get_ScopeHmdDistance())*3^2.7)	
 	end
-		print(Get_ScopeHmdDistance())
+		--print(Get_ScopeHmdDistance())
 		scene_capture_component.FOVAngle = fov
 end
 
@@ -554,10 +591,10 @@ local function AdjustSceneComponentAngle(c_pawn)
 	local ReturnAngle
 	if c_pawn ~=nil then
 		if	c_pawn:GetCurrentArm() ~=nil then		
-				local RearsightX=c_pawn:GetCurrentArm().m_attachments[2].m_rearFixedPointOffset.X
-				local FrontsightX=c_pawn:GetCurrentArm().m_attachments[2].m_frontFixedPointOffset.X
-				local RearZ = c_pawn:GetCurrentArm().m_attachments[2].m_rearFixedPointOffset.z 
-				local FrontZ= c_pawn:GetCurrentArm().m_attachments[2].m_frontFixedPointOffset.z
+				local RearsightX=Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).m_rearFixedPointOffset.X
+				local FrontsightX=Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).m_frontFixedPointOffset.X
+				local RearZ = Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).m_rearFixedPointOffset.z 
+				local FrontZ= Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).m_frontFixedPointOffset.z
 				ReturnAngle=math.atan((RearZ-FrontZ)/(RearsightX-FrontsightX))
 		end
 	end
@@ -625,11 +662,16 @@ uevr.sdk.callbacks.on_pre_engine_tick(
         switch_scope_state(c_pawn)
 		Recalculate_FOV(c_pawn)
 		AdjustSceneComponentAngle(c_pawn)
+		UpdateReticleTexture()
+		print(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string())
 	--	fov= 1/(0.2*((c_pawn:GetCurrentArm().m_attachments[2].ZoomLevelIndex)+1))
 	--	
 	--	scene_capture_component.FOVAngle = fov
-	
-
+	if c_pawn.IsHoldingBreath then
+		uevr.params.vr.set_mod_value("UObjectHook_AttachLerpSpeed" , "2.000000")
+	else 
+		uevr.params.vr.set_mod_value("UObjectHook_AttachLerpSpeed" , "15.000000")
+	end
 
 end)
 
