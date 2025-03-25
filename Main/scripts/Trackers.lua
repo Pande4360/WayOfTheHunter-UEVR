@@ -46,8 +46,8 @@ local rControllerIndex= 2
 	local hmd_actor = nil -- The purpose of the HMD actor is to accurately track the HMD's world transform
 	local left_hand_actor = nil
 	local right_hand_actor = nil
-	local left_hand_component = nil
-	local right_hand_component = nil
+	 left_hand_component = nil
+	 right_hand_component = nil
 	hmd_component = nil
 	local last_level = nil
 	

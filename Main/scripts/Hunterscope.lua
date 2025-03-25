@@ -12,7 +12,7 @@ local api = uevr.api
 local vr = uevr.params.vr
 
 local emissive_material_amplifier = 2.0 
-local fov = 90.0
+local fov = 30.0
 
 -- Static variables
 local emissive_mesh_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"
@@ -525,9 +525,9 @@ local function Get_ScopeHmdDistance()
 	local scope_plane_position = scope_plane_component:K2_GetComponentLocation()
 	local hmdPos = hmd_component:K2_GetComponentLocation()
 	local Diff= math.sqrt((hmdPos.x-scope_plane_position.x)^2+(hmdPos.y-scope_plane_position.y)^2+(hmdPos.z-scope_plane_position.z)^2)
-	if Diff <=2.5 then
-		Diff=2.5
-	end
+	--if Diff <=2.5 then
+	--	Diff=2.5
+	--end
 	return Diff
 end
 local function Get_CurrentScopeFOV(c_pawn)
@@ -541,7 +541,12 @@ local function Get_CurrentScopeFOV(c_pawn)
 end
 
 local function Recalculate_FOV(c_pawn)	
-		fov= Get_CurrentScopeFOV(c_pawn)* (2* math.atan(2.5/Get_ScopeHmdDistance())/(math.pi/2))		
+	if Get_ScopeHmdDistance()>=5.5 then
+		fov= 30*(Get_CurrentScopeFOV(c_pawn)* (2* math.atan(2.5/Get_ScopeHmdDistance())/(90/180*math.pi)))/94	
+	else 
+		fov= 30*(Get_CurrentScopeFOV(c_pawn)* (2* math.atan(2.5/Get_ScopeHmdDistance())/(90/180*math.pi)))/(94-(5.5-Get_ScopeHmdDistance())*3^2.7)	
+	end
+		print(Get_ScopeHmdDistance())
 		scene_capture_component.FOVAngle = fov
 end
 
