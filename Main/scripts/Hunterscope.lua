@@ -531,6 +531,7 @@ end
 local function UpdateReticleTexture()
 	if Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()) ~= CurrentScope then
 		CurrentScope=Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm())
+		print(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string().." equipped")
 		if string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope01") then
 			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name)
 		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope02") then
@@ -663,7 +664,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
 		Recalculate_FOV(c_pawn)
 		AdjustSceneComponentAngle(c_pawn)
 		UpdateReticleTexture()
-		print(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string())
+		--print(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string())
 	--	fov= 1/(0.2*((c_pawn:GetCurrentArm().m_attachments[2].ZoomLevelIndex)+1))
 	--	
 	--	scene_capture_component.FOVAngle = fov
