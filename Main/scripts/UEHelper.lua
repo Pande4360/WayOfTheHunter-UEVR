@@ -1,3 +1,12 @@
+local api = uevr.api
+	
+	local params = uevr.params
+	local callbacks = params.sdk.callbacks
+	local pawn = api:get_local_pawn(0)
+	local vr=uevr.params.vr
+
+
+
 function find_required_object(name)
     local obj = uevr.api:find_uobject(name)
     if not obj then
@@ -51,16 +60,16 @@ function PositiveIntegerMask(text)
 end
 --
 --Xinput helpers
-function isButtonPressed(state, button)
+local function isButtonPressed(state, button)
 	return state.Gamepad.wButtons & button ~= 0
 end
-function isButtonNotPressed(state, button)
+local function isButtonNotPressed(state, button)
 	return state.Gamepad.wButtons & button == 0
 end
-function pressButton(state, button)
+local function pressButton(state, button)
 	state.Gamepad.wButtons = state.Gamepad.wButtons | button
 end
-function unpressButton(state, button)
+local function unpressButton(state, button)
 	state.Gamepad.wButtons = state.Gamepad.wButtons & ~(button)
 end
 --

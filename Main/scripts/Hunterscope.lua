@@ -12,7 +12,7 @@ local api = uevr.api
 local vr = uevr.params.vr
 
 local emissive_material_amplifier = 2.0 
-local fov = 30.0
+local fov = 15.0
 
 -- Static variables
 local emissive_mesh_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"
@@ -53,6 +53,9 @@ local temp_vec3 = Vector3d.new(0, 0, 0)
 local temp_vec3f = Vector3f.new(0, 0, 0)
 local zero_color = nil
 local zero_transform = nil
+
+local current_scope_state= false
+local wanted_tex=nil
 
 local function find_required_object(name)
     local obj = uevr.api:find_uobject(name)
@@ -219,7 +222,10 @@ end
 local function Get_Scope_Object(parent_Obj)
 	if not parent_Obj then return nil end
 	local child_Obj_array= parent_Obj.m_attachments
-	local CurrentScopeObj= SearchSubObjectArrayForObject(child_Obj_array, "Scope")
+	local CurrentScopeObj= SearchSubObjectArrayForObject(child_Obj_array, "Scope") 
+	if CurrentScopeObj== nil then
+		CurrentScopeObj= SearchSubObjectArrayForObject(child_Obj_array, "Collimator")
+	end
 	if CurrentScopeObj~=nil then
 		return CurrentScopeObj
 	end
@@ -289,6 +295,7 @@ local function spawn_scope_plane(world, owner, pos, rt)
     dynamic_material:SetVectorParameterValue("Color", color)
     scope_plane_component = local_scope_mesh
 end
+
 local function spawn_reticle_plane(world, owner, pos, tex)
     local local_reticle_mesh = scope_actor:AddComponentByClass(staic_mesh_component_c, false, zero_transform, false)
 	if local_reticle_mesh == nil then
@@ -322,16 +329,35 @@ local function spawn_reticle_plane(world, owner, pos, tex)
     -- local_scope_mesh:SetHiddenInGame(false)
     local_reticle_mesh:SetCollisionEnabled(0)
 
-	local wanted_tex= api:find_uobject(sightTexture_name)
-	if wanted_tex == nil then
-        print("Failed to find Reticle Texture2D")
-        return
-    end
+		
     dynamic_materialReticle = local_reticle_mesh:CreateDynamicMaterialInstance(0, wanted_mat, "ReticleMaterial")
 	--local dynamic_texture = wanted_tex:CreateTransient(100,100
 
 	CurrentScope=Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm())
-    dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
+		if string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope01") or string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Collimator01") then
+			wanted_tex= api:find_uobject(sightTexture_name)
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
+		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope02") then
+			wanted_tex= api:find_uobject(sightTexture_name2)
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
+		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope03") then
+			wanted_tex= api:find_uobject(sightTexture_name3)
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
+		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope04") then
+			wanted_tex= api:find_uobject(sightTexture_name4)
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
+		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope05") then
+			wanted_tex= api:find_uobject(sightTexture_name5)
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
+		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope06") then
+			wanted_tex= api:find_uobject(sightTexture_name6)
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
+		end
+		if wanted_tex == nil then
+        print("Failed to find Reticle Texture2D")
+        return
+	end
+   -- dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
 	--dynamic_material.Opacity:SetTextureParameterValue("LinearColor", wanted_tex)
     local color = StructObject.new(flinearColor_c)
     color.R = 2
@@ -417,9 +443,12 @@ local function spawn_scope(game_engine, pawn)
     if not validate_object(scope_plane_component) then
         print("scope_plane_component is invalid -- recreating")
         spawn_scope_plane(world, nil, pawn_pos, rt)
-		spawn_reticle_plane(world, nil, pawn_pos, sightTexture_name)
+		--spawn_reticle_plane(world, nil, pawn_pos, sightTexture_name)
     end
-
+	if not validate_object(reticle_plane_component) then
+        print("reticle_plane_component is invalid -- recreating")
+        spawn_reticle_plane(world, nil, pawn_pos, sightTexture_name)
+    end
     if not validate_object(scene_capture_component) then
         print("spawn_scene_capture_component is invalid -- recreating")
         spawn_scene_capture_component(world, nil, pawn_pos, fov, rt)
@@ -433,66 +462,132 @@ local last_scope_state = false
 
 local function attach_components_to_weapon(weapon_mesh)
     if not weapon_mesh then return end
-    
-    -- Attach scene capture to weapon
-    if scene_capture_component ~= nil then
-        -- scene_capture:DetachFromParent(true, false)
-        -- "AimSocket"
-        print("Attaching scene_capture_component to weapon:" .. weapon_mesh:get_fname():to_string())
-        scene_capture_component:K2_AttachToComponent(
-            weapon_mesh,
-            "Muzzle",
-            2, -- Location rule
-            2, -- Rotation rule
-            0, -- Scale rule
-            true -- Weld simulated bodies
-        )
-        scene_capture_component:K2_SetRelativeRotation(temp_vec3:set(0, 0, 90), false, reusable_hit_result, false)
-        scene_capture_component:SetVisibility(false)
-    end
-    
-    -- Attach plane to weapon
-    if scope_plane_component then
+	print("Attach new")
+	if not string.find(api:get_local_pawn(0).m_currentEquipment:get_fname():to_string(),"Bino") and not string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Collimator")  then
+	
+		-- Attach scene capture to weapon
+		if scene_capture_component ~= nil then
+			-- scene_capture:DetachFromParent(true, false)
+			-- "AimSocket"
+			print("Attaching scene_capture_component to weapon:" .. weapon_mesh:get_fname():to_string())
+			scene_capture_component:K2_AttachToComponent(
+				weapon_mesh,
+				"Muzzle",
+				2, -- Location rule
+				2, -- Rotation rule
+				0, -- Scale rule
+				true -- Weld simulated bodies
+			)
+			scene_capture_component:K2_SetRelativeRotation(temp_vec3:set(0, 0, 90), false, reusable_hit_result, false)
+			scene_capture_component:SetVisibility(false)
+		end
 		
-       scope_mesh = Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).FP_Scope--get_scope_mesh(weapon_mesh)
-        if scope_mesh == nil then
-            print("Failed to find scope mesh")
-            return
-        end
-        -- OpticCutoutSocket
-        scope_plane_component:K2_AttachToComponent(
-            scope_mesh,
-            "AimSocket",
-            2, -- Location rule
-            2, -- Rotation rule
-            2, -- Scale rule
-            true -- Weld simulated bodies
-        )
-        scope_plane_component:K2_SetRelativeRotation(temp_vec3:set(0, 90, 90), false, reusable_hit_result, false)
-        scope_plane_component:K2_SetRelativeLocation(temp_vec3:set(-14.22, 0,0 ), false, reusable_hit_result, false)
-        scope_plane_component:SetWorldScale3D(temp_vec3:set(0.03,0.03, 0.00001))
-        scope_plane_component:SetVisibility(false)
-    end
-	if reticle_plane_component then
-        scope_mesh = Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).FP_Scope--get_scope_mesh(weapon_mesh)
-        if scope_mesh == nil then
-            print("Failed to find scope mesh")
-            return
-        end
-        -- OpticCutoutSocket
-        reticle_plane_component:K2_AttachToComponent(
-            scope_mesh,
-            "AimSocket",
-            2, -- Location rule
-            2, -- Rotation rule
-            2, -- Scale rule
-            true -- Weld simulated bodies
-        )
-		reticle_plane_component:K2_SetRelativeRotation(temp_vec3:set(0, 90, 90), false, reusable_hit_result, false)
-        reticle_plane_component:K2_SetRelativeLocation(temp_vec3:set(-14.4, 0, 0), false, reusable_hit_result, false)
-        reticle_plane_component:SetWorldScale3D(temp_vec3:set(0.03,0.03, 0.00001))
-        reticle_plane_component:SetVisibility(false)
-    end
+		-- Attach plane to weapon
+		if scope_plane_component then
+			
+		scope_mesh = Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).FP_Scope--get_scope_mesh(weapon_mesh)
+			if scope_mesh == nil then
+				print("Failed to find scope mesh")
+				return
+			end
+			-- OpticCutoutSocket
+			scope_plane_component:K2_AttachToComponent(
+				scope_mesh,
+				"AimSocket",
+				2, -- Location rule
+				2, -- Rotation rule
+				2, -- Scale rule
+				true -- Weld simulated bodies
+			)
+			scope_plane_component:K2_SetRelativeRotation(temp_vec3:set(0, 90, 90), false, reusable_hit_result, false)
+			scope_plane_component:K2_SetRelativeLocation(temp_vec3:set(-14.22, 0,0 ), false, reusable_hit_result, false)
+			scope_plane_component:SetWorldScale3D(temp_vec3:set(0.03,0.03, 0.00001))
+			scope_plane_component:SetVisibility(false)
+		end
+		if reticle_plane_component then
+			scope_mesh = Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).FP_Scope--get_scope_mesh(weapon_mesh)
+			if scope_mesh == nil then
+				print("Failed to find scope mesh")
+				return
+			end
+			-- OpticCutoutSocket
+			reticle_plane_component:K2_AttachToComponent(
+				scope_mesh,
+				"AimSocket",
+				2, -- Location rule
+				2, -- Rotation rule
+				2, -- Scale rule
+				true -- Weld simulated bodies
+			)
+			reticle_plane_component:K2_SetRelativeRotation(temp_vec3:set(0, 90, 90), false, reusable_hit_result, false)
+			reticle_plane_component:K2_SetRelativeLocation(temp_vec3:set(-14.4, 0, 0), false, reusable_hit_result, false)
+			reticle_plane_component:SetWorldScale3D(temp_vec3:set(0.03,0.03, 0.00001))
+			reticle_plane_component:SetVisibility(false)
+		end
+	elseif string.find(api:get_local_pawn(0).m_currentEquipment:get_fname():to_string(),"Bino") then
+		if scene_capture_component ~= nil then
+			-- scene_capture:DetachFromParent(true, false)
+			-- "AimSocket"
+			print("Attaching scene_capture_component to weapon:" .. weapon_mesh:get_fname():to_string())
+			scene_capture_component:K2_AttachToComponent(
+				weapon_mesh,
+				"Root",
+				2, -- Location rule
+				2, -- Rotation rule
+				0, -- Scale rule
+				true -- Weld simulated bodies
+			)
+			scene_capture_component:K2_SetRelativeRotation(temp_vec3:set(0, 0, 90), false, reusable_hit_result, false)
+			scene_capture_component:SetVisibility(false)
+			scene_capture_component.FOVAngle = fov
+		end
+		
+		-- Attach plane to weapon
+		if scope_plane_component then
+			
+		scope_mesh = api:get_local_pawn(0).m_currentEquipment.m_meshFirstPerson --get_scope_mesh(weapon_mesh)
+			if scope_mesh == nil then
+				print("Failed to find scope mesh")
+				return
+			end
+			-- OpticCutoutSocket
+			scope_plane_component:K2_AttachToComponent(
+				scope_mesh,
+				"Root",
+				2, -- Location rule
+				2, -- Rotation rule
+				2, -- Scale rule
+				true -- Weld simulated bodies
+			)
+			scope_plane_component:K2_SetRelativeRotation(temp_vec3:set(0, 90, 90), false, reusable_hit_result, false)
+			scope_plane_component:K2_SetRelativeLocation(temp_vec3:set(-5.22, 0,0 ), false, reusable_hit_result, false)
+			scope_plane_component:SetWorldScale3D(temp_vec3:set(0.12,0.12, 0.00001))
+			scope_plane_component:SetVisibility(false)
+		end
+	elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Collimator") then	
+		print("found Collimator")
+		if reticle_plane_component then
+			scope_mesh = Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).FP_Scope--get_scope_mesh(weapon_mesh)
+			if scope_mesh == nil then
+				print("Failed to find scope mesh")
+				return
+			end
+			-- OpticCutoutSocket
+			reticle_plane_component:K2_AttachToComponent(
+				scope_mesh,
+				"AimSocket",
+				2, -- Location rule
+				2, -- Rotation rule
+				2, -- Scale rule
+				true -- Weld simulated bodies
+			)
+			local Start_range=Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).m_rangeDistance
+			reticle_plane_component:K2_SetRelativeRotation(temp_vec3:set(0, 90, 90), false, reusable_hit_result, false)
+			reticle_plane_component:K2_SetRelativeLocation(temp_vec3:set(Start_range, 0, 1.5), false, reusable_hit_result, false)
+			reticle_plane_component:SetWorldScale3D(temp_vec3:set(0.03*Start_range/100,0.03*Start_range/100, 0.00001))
+			reticle_plane_component:SetVisibility(false)
+		end		
+	end
 end
 
 local function is_scope_active(pawn)
@@ -510,7 +605,7 @@ local function is_scope_active(pawn)
 end
 
 local function switch_scope_state(pawn)
-    local current_scope_state = is_scope_active(pawn)
+    current_scope_state = is_scope_active(pawn)
     -- if current_scope_state == last_scope_state then
     --     return
     -- end
@@ -533,17 +628,23 @@ local function UpdateReticleTexture()
 		CurrentScope=Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm())
 		print(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string().." equipped")
 		if string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope01") then
-			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name)
+			wanted_tex= api:find_uobject(sightTexture_name)
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
 		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope02") then
-			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name2)
+			wanted_tex= api:find_uobject(sightTexture_name2)
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
 		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope03") then
-			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name3)
+			wanted_tex= api:find_uobject(sightTexture_name3)
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
 		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope04") then
-			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name4)
+			wanted_tex= api:find_uobject(sightTexture_name4)
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
 		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope05") then
-			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name5)
+			wanted_tex= api:find_uobject(sightTexture_name5)
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
 		elseif string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope06") then
-			dynamic_materialReticle:SetTextureParameterValue("LinearColor", sightTexture_name6)
+			wanted_tex= api:find_uobject(sightTexture_name6)
+			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
 		end
 	end
 	
@@ -580,9 +681,13 @@ end
 
 local function Recalculate_FOV(c_pawn)	
 	if Get_ScopeHmdDistance()>=5.5 then
+		--pcall(function()
 		fov= 30*(Get_CurrentScopeFOV(c_pawn)* (2* math.atan(2.5/Get_ScopeHmdDistance())/(90/180*math.pi)))/94	
+		--end)
 	else 
+	--pcall(function()
 		fov= 30*(Get_CurrentScopeFOV(c_pawn)* (2* math.atan(2.5/Get_ScopeHmdDistance())/(90/180*math.pi)))/(94-(5.5-Get_ScopeHmdDistance())*3^2.7)	
+	--end)
 	end
 		--print(Get_ScopeHmdDistance())
 		scene_capture_component.FOVAngle = fov
@@ -601,7 +706,37 @@ local function AdjustSceneComponentAngle(c_pawn)
 	end
 	scene_capture_component:K2_SetRelativeRotation(temp_vec3:set(ReturnAngle*180/math.pi, 0, 90), false, reusable_hit_result, false)
 end
-	
+
+local function UpdateReticleVisibility()
+	if current_scope_state == true then
+		local HmdPos= hmd_component:K2_GetComponentLocation()
+		local ReticlePos= reticle_plane_component:K2_GetComponentLocation()
+		local ScopePos=  Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).FP_Scope:K2_GetComponentLocation()
+			--ScopePos.y=ScopePos.y-1.5
+		local Vec1TempX=ReticlePos.x-HmdPos.x
+		local Vec1TempY=ReticlePos.y-HmdPos.y
+		local Vec1TempZ=ReticlePos.z-HmdPos.z
+		
+		local Vec2TempX=ReticlePos.x- ScopePos.x 
+		local Vec2TempY=ReticlePos.y- ScopePos.y 
+		local Vec2TempZ=ReticlePos.z- ScopePos.z 
+		
+		local ScalarTemp= Vec1TempX*Vec2TempX + Vec1TempY*Vec2TempY + Vec1TempZ*Vec2TempZ
+		local LFactor= math.sqrt(Vec1TempX^2 +Vec1TempY^2+ Vec1TempZ^2)* math.sqrt(Vec2TempX^2+ Vec2TempY^2+ Vec2TempZ^2)
+		local Alpha= math.acos(ScalarTemp/LFactor)
+		local Range= Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).m_rangeDistance
+		local AlphaMax= 0.0020 -- 2/180*math.pi --math.atan(2.5/ Range)
+		local AlphaMin= 0.0014
+		
+		print("Alpha: ".. Alpha .. "   AlphaMax: " .. AlphaMax)
+		if math.abs(Alpha)<= AlphaMax and math.abs(Alpha)>= AlphaMin then
+			reticle_plane_component:SetVisibility(true)
+		elseif math.abs(Alpha)> AlphaMax  or math.abs(Alpha)< AlphaMin 	then
+			reticle_plane_component:SetVisibility(false)
+		end
+	end
+end
+		
 
 uevr.sdk.callbacks.on_pre_engine_tick(
 	function(engine, delta)
@@ -631,22 +766,30 @@ uevr.sdk.callbacks.on_pre_engine_tick(
         local c_pawn = api:get_local_pawn(0)
 		
 		local weapon_mesh=nil
-        local weapon_Obj = c_pawn:GetCurrentArm()--get_equipped_weapon(c_pawn)
+        local weapon_Obj = c_pawn.m_currentEquipment --:GetCurrentArm()--get_equipped_weapon(c_pawn)
 		if weapon_Obj ~= nil then
 			weapon_mesh=weapon_Obj.m_meshFirstPerson
+			weapon_mesh_attach=weapon_Obj.m_mesh
 		end
+		UEVR_UObjectHook.remove_motion_controller_state(current_weapon_attach)
+		
+		UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh_attach):set_location_offset(Vector3f.new (-0.7699999809265137,-8.020000457763672,17.579999923706055))
+		UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh_attach):set_permanent(true)
+		current_weapon_attach=weapon_mesh_attach
         if weapon_mesh then
             -- fix_materials(weapon_mesh)
             local weapon_changed = not current_weapon or weapon_mesh.AnimScriptInstance ~= current_weapon.AnimScriptInstance
             local scope_changed = (not scope_mesh or not scope_mesh.AttachParent) and is_scope_active(c_pawn)
-            if weapon_changed or scope_changed then
+            if weapon_mesh~= current_weapon then -- weapon_changed or scope_changed then
                 print("Weapon changed")
                 print("Previous weapon: " .. (current_weapon and current_weapon:get_fname():to_string() or "none"))
                 print("New weapon: " .. weapon_mesh:get_fname():to_string())
                 
+				UEVR_UObjectHook.remove_motion_controller_state(current_weapon_attach)
+				UEVR_UObjectHook.remove_motion_controller_state(weapon_mesh_attach)
                 -- Update current weapon reference
                 current_weapon = weapon_mesh
-                
+                current_weapon_attach=weapon_mesh_attach
                 -- Attempt to attach components
                 spawn_scope(engine, c_pawn)
                 attach_components_to_weapon(weapon_mesh)
@@ -660,20 +803,32 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 last_scope_state = false
             end
         end
+		
+		
         switch_scope_state(c_pawn)
-		Recalculate_FOV(c_pawn)
-		AdjustSceneComponentAngle(c_pawn)
+		pcall(function()
+			Recalculate_FOV(c_pawn)
+		end)
+		pcall(function()
+			AdjustSceneComponentAngle(c_pawn)
+		end)
+		pcall(function()
 		UpdateReticleTexture()
+		end)
+		UpdateReticleVisibility()
 		--print(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string())
 	--	fov= 1/(0.2*((c_pawn:GetCurrentArm().m_attachments[2].ZoomLevelIndex)+1))
 	--	
 	--	scene_capture_component.FOVAngle = fov
-	if c_pawn.IsHoldingBreath then
+	if c_pawn:IsHoldingBreath() then
 		uevr.params.vr.set_mod_value("UObjectHook_AttachLerpSpeed" , "2.000000")
 	else 
 		uevr.params.vr.set_mod_value("UObjectHook_AttachLerpSpeed" , "15.000000")
 	end
-
+	
+	
+	
+	
 end)
 
 

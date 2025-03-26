@@ -1,5 +1,6 @@
 require("CONFIG")
 require("UEHelper")
+require("Trackers")
 --CONFIG--
 --------	
 	--local isRhand = true							--right hand config
@@ -42,8 +43,20 @@ local LWeaponZone=0
 local RWeaponZone=0
 local inMenu=false
 
-
-
+local isDpadLeft=false
+local isDpadRight=false
+local function isButtonPressed(state, button)
+	return state.Gamepad.wButtons & button ~= 0
+end
+local function isButtonNotPressed(state, button)
+	return state.Gamepad.wButtons & button == 0
+end
+local function pressButton(state, button)
+	state.Gamepad.wButtons = state.Gamepad.wButtons | button
+end
+local function unpressButton(state, button)
+	state.Gamepad.wButtons = state.Gamepad.wButtons & ~(button)
+end
 uevr.sdk.callbacks.on_xinput_get_state(
 function(retval, user_index, state)
 
@@ -64,13 +77,7 @@ function(retval, user_index, state)
 	
 			end
 		end
-		if ThumbRY >= 30000 and Stamina >0 then
-			pawn.RunSpeed=600
-			isSprinting=true
-		elseif ThumbRY <30000 or Stamina <=0 then 
-			pawn.RunSpeed= 320
-			isSprinting=false
-		end
+	
 	else 
 		if DisableUnnecessaryBindings then
 			if not lShoulder then
@@ -81,13 +88,7 @@ function(retval, user_index, state)
 				unpressButton(state, XINPUT_GAMEPAD_DPAD_DOWN	    )
 			end
 		end
-		if ThumbLY >= 30000 and Stamina >0 then
-			pawn.RunSpeed=600
-			isSprinting=true
-		elseif ThumbLY <30000 or Stamina <=0 then 
-			pawn.RunSpeed= 320
-			isSprinting=false
-		end
+	
 	end
 
 
@@ -211,17 +212,11 @@ function(retval, user_index, state)
 		pressButton(state, XINPUT_GAMEPAD_X)
 	end
 	
+		
+	
 	
 	--Reset Height
-	if lGrabActive and rGrabActive then
-	    ReadyUpTick= ReadyUpTick+1
-		if ReadyUpTick ==120 then
-			--api:get_player_controller(0):ReadyUp()
-			ResetHeight=true
-		end
-	else 
-		ReadyUpTick=0
-	end
+	
 	
 	--Grab activation
 	if rShoulder then
@@ -269,9 +264,20 @@ else
 		pressButton(state,XINPUT_GAMEPAD_DPAD_LEFT)
 	end	
 end
+if RWeaponZone==4 and isDriving==false then
+	state.Gamepad.sThumbLX=0
+	state.Gamepad.sThumbLY=0
+end
+if isDpadLeft  then
+	pressButton(state,XINPUT_GAMEPAD_DPAD_LEFT)
+	isDpadLeft=false
+end
+if isDpadRight  then
+	pressButton(state,XINPUT_GAMEPAD_DPAD_RIGHT)
+	isDpadRight=false
+end
 	--local VecA= Vector3f.new(x,y,z)
-	
---	print(VecA.x)
+	--	print(VecA.x)
 	
 end)
 
@@ -507,9 +513,9 @@ if WeaponInteractions then
 		elseif LHandWeaponZ < 25 and LHandWeaponZ > 0 and LHandWeaponX < 45 and LHandWeaponX > 15 and LHandWeaponY < 15 and LHandWeaponY > -15 then
 			isHapticZoneWL = true
 			RWeaponZone = 3 --Front at barrel l, e.g. Attachement
-		elseif LHandWeaponZ < 20 and LHandWeaponZ > 10 and LHandWeaponX < 15 and LHandWeaponX > 0 and LHandWeaponY < 12 and LHandWeaponY > -12 then
-			isHapticZoneWR = true
-			RWeaponZone = 5
+		elseif LHandWeaponZ < 20 and LHandWeaponZ > 10 and LHandWeaponX < 20 and LHandWeaponX > 0 and LHandWeaponY < 12 and LHandWeaponY > -12 then
+			isHapticZoneWL = true
+			RWeaponZone = 4
 		else
 			RWeaponZone= 0
 			isHapticZoneWL=false
@@ -595,26 +601,26 @@ if isDriving==false then
 		elseif RWeaponZone==3 and lThumb and lThumbSwitchState==0 then
 			pawn:ToggleHeadTorch()
 			lThumbSwitchState=1
-		elseif RWeaponZone==4 and ThumbLY > 30000 and ThumbLActive==false then
+		elseif RWeaponZone==4 and ThumbLY > 30000 and ThumbLActive==false and pawn.m_isInADS then
 			pcall(function()
 				pawn:GetCurrentArm():IncreaseZoom()
 				ThumbLActive=true
 			end)
-		elseif RWeaponZone==4 and ThumbLY < 30000 and ThumbLActive==false then
+		elseif RWeaponZone==4 and ThumbLY < -30000 and ThumbLActive==false and pawn.m_isInADS then
 			pcall(function()
 				pawn:GetCurrentArm():DecreaseZoom()
 				ThumbLActive=true
 			end)
-		elseif RWeaponZone==4 and ThumbRY > 30000 and ThumbLActive==false then
-			pcall(function()
-				pawn:GetCurrentArm():AdjustElevationUp()
+		elseif RWeaponZone==4 and ThumbLX > 30000 and ThumbLActive==false and pawn.m_isInADS then
+			
+				isDpadRight=true
 				ThumbLActive=true
-			end)
-		elseif RWeaponZone==4 and ThumbRY < 30000 and ThumbLActive==false then
-			pcall(function()
-				pawn:GetCurrentArm():AdjustElevationDown()
+			
+		elseif RWeaponZone==4 and ThumbLX < -30000 and ThumbLActive==false and pawn.m_isInADS then
+			
+				isDpadLeft=true
 				ThumbLActive=true
-			end)
+			
 		end
 	else
 		

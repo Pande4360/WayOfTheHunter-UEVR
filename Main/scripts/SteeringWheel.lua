@@ -1,5 +1,6 @@
 require("UEHelper")
 require("CONFIG")
+require("Trackers")
 local api = uevr.api
 local vr = uevr.params.vr
 
@@ -9,7 +10,7 @@ local vr = uevr.params.vr
 local ActiveHandState= 0 --0: non, 1:right, 2:left
 local isLHandPressed=false
 local isRHandPressed=false
-local isDriving = false
+
 
 --degrees
 local CurrentHandRoll_Right = 0
@@ -17,52 +18,61 @@ local CurrentHandRoll_Left  = 0
 local StartRoll_Left=0
 local StartRoll_Right=0
 
-local ThumbLX   = 0
-local ThumbLY   = 0
-local ThumbRX   = 0
-local ThumbRY   = 0
-local LTrigger  = 0
-local RTrigger  = 0
-local rShoulder = false
-local lShoulder = false
-local lThumb    = false
-local rThumb    = false
-local Abutton = false
-local Bbutton = false
-local Xbutton = false
-local Ybutton = false
+
 local CurrentSteerVal=0
 local LastSteerVal=0
+local CheckSteerVal =0
+local Roll_Last_Left=0
+local Roll_Last_Right=0
+local DiffAngleRight=0
+local DiffAngleLeft=0
+local Tick=0
 
 
 local function UpdateHandState()
-	if lShoulder and isLHandPressed==false then
-		ActiveHandState= 2
-		isLHandPressed = true
-		StartRoll_Left=CurrentHandRoll_Left
-	elseif lShoulder and ActiveHandState==1 and not rShoulder then
-		ActiveHandState= 2
-		isLHandPressed = true
-		StartRoll_Left=CurrentHandRoll_Left
+	
+	
+	if Tick >=3 then
+	DeltaRight= math.abs(CurrentHandRoll_Right - Roll_Last_Right)
+	Roll_Last_Right= CurrentHandRoll_Right
+	DeltaLeft= math.abs(CurrentHandRoll_Left - Roll_Last_Left	)
+	Roll_Last_Left=CurrentHandRoll_Left
+	Tick=0
+	else
+		Tick=Tick+1
 	end
-	if rShoulder  and isRHandPressed==false then
-			ActiveHandState= 1
-			isRHandPressed = true
+	if lShoulder  then
+		--ActiveHandState= 2
+		--isLHandPressed = true
+		if ActiveHandState ~= 2 and DeltaLeft > DeltaRight then
+			ActiveHandState = 2
+			StartRoll_Left=CurrentHandRoll_Left
+		end
+	end
+		--DeltaLeft= CurrentHandRoll_Left - Roll_Last_Left
+		--Roll_Last_Left=CurrentHandRoll_Left
+	
+	
+	if rShoulder  then
+		--ActiveHandState= 1
+		--isRHandPressed = true
+		if ActiveHandState ~= 1 and DeltaRight >= DeltaLeft then
 			StartRoll_Right= CurrentHandRoll_Right
-	elseif rShoulder and ActiveHandState==2 and not lShoulder then
-			ActiveHandState= 1
-			isRHandPressed = true
-			StartRoll_Right= CurrentHandRoll_Right
+			ActiveHandState=1 
+		end
 	end
-	if not lShoulder and isLHandPressed then
-			isLHandPressed=false
+			--DeltaRight= CurrentHandRoll_Right - Roll_Last_Right
+		--	Roll_Last_Right= CurrentHandRoll_Right
+	if not rShoulder and not lShoulder then
+		ActiveHandState=0
 	end
-	if not rShoulder and isRHandPressed then
-			isRHandPressed=false
+	if LastHandState==ActiveHandState then
+		CheckSteerVal=CurrentSteerVal	
+	elseif LastHandState~=ActiveHandState then
+		LastSteerVal=CheckSteerVal
 	end
-	if not lShoulder and not rShoulder then
-			ActiveHandState=0
-	end
+	LastHandState=ActiveHandState
+	
 end
 
 --XINPUT functions
@@ -87,17 +97,20 @@ local function UpdateInput(state)
 end
 
 local function Drive(state)
+	print(CurrentHandRoll_Left)
+	print(ActiveHandState)
+	print("  ")
 	if isDriving then
 		--state.Gamepad.sThumbLX = 0
 		--state.Gamepad.sThumbRX = 0
 	
 		if ActiveHandState == 1 then
-			local DiffAngleRight= CurrentHandRoll_Right-StartRoll_Right
-			CurrentSteerVal= LastSteerVal+DiffAngleRight
+			DiffAngleRight= CurrentHandRoll_Right-StartRoll_Right
+			CurrentSteerVal= LastSteerVal + DiffAngleRight
 			
 		elseif ActiveHandState ==2 then
-			local DiffAngleLeft= CurrentHandRoll_Left-StartRoll_Left
-			CurrentSteerVal= LastSteerVal+DiffAngleLeft
+			DiffAngleLeft= CurrentHandRoll_Left-StartRoll_Left
+			CurrentSteerVal= LastSteerVal + DiffAngleLeft
 		elseif ActiveHandState==0 then
 			CurrentSteerVal = 0
 		end
@@ -110,6 +123,8 @@ local function Drive(state)
 		state.Gamepad.sThumbLX = 32767/90*CurrentSteerVal
 	end	
 end
+
+
 
 uevr.sdk.callbacks.on_xinput_get_state(
 function(retval, user_index, state)
@@ -128,14 +143,13 @@ end)
 
 
 
-
+local CheckSteerVal
 
 uevr.sdk.callbacks.on_pre_engine_tick(
 	function(engine, delta)
 	
-	if ActiveHandState~=ActiveHandState then
-		LastSteerVal=CurrentSteerVal
-	end
+	
+		
 	
 	pawn=api:get_local_pawn(0)
 
@@ -159,8 +173,8 @@ uevr.params.sdk.callbacks.on_early_calculate_stereo_view_offset(
 
 function(device, view_index, world_to_meters, position, rotation, is_double)
 --print(rotation.x)
-	    
-
+if	isDriving==false then    
+		DefaultPos=position
 	--		if LastTickRot~=rotation.x then
 	--		RotDiff = rotation.x -LastTickRot
 	--		
@@ -179,15 +193,19 @@ function(device, view_index, world_to_meters, position, rotation, is_double)
 		
 		--local FinalAngle=tostring(PositiveIntegerMask(DefaultOffset)/1000000+RotDiff)
 		--uevr.params.vr.set_mod_value("VR_ControllerPitchOffset", FinalAngle)
-		pawn=api:get_local_pawn(0)
-		if pawn ~= nil and isDriving==false then
-			pawn_pos = pawn.RootComponent:K2_GetComponentLocation()
+		local Cpawn=api:get_local_pawn(0)
+		if isDriving==false then
+			
+			local pawn_pos = Cpawn.RootComponent:K2_GetComponentLocation()
 			
 			position.x = pawn_pos.x 
-			position.y = pawn_pos.y -- +5
-		elseif pawn~=nil and isDriving==true then
+			position.y = pawn_pos.y
+			position.Z = pawn_pos.z + 70-- +5
+		else
+			
+			
 			
 		end
-	
-
+	print(isDriving)
+end
 end)

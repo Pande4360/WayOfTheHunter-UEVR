@@ -3,6 +3,8 @@ PhysicalDriving= true 			--Activates physical steering
 DisableUnnecessaryBindings=false
 isRhand=true
 HolstersActive=true
+HapticFeedback=true
+WeaponInteractions=true
 
 --ZONES:
 --ZoneR01_Z_Min =

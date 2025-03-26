@@ -7,15 +7,15 @@
         "m_currentEquipment",
         "Properties",
         "m_attachments",
-        "BP_Scope01_C BP_Scope01_C_2147460515",
-        "Components",
-        "CustomFOVStaticMeshComponent FP_Lens_Back",
+        "BP_Scope01_C BP_Scope01_C_2147460642",
+        "Properties",
+        "FP_Lens_Back",
         "Properties",
         "RelativeLocation"
     ],
     "properties": [
         {
-            "data": 3228146074,
+            "data": 3190019850,
             "name": "X"
         }
     ],
