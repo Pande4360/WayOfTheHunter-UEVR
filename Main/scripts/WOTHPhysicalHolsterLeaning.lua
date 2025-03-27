@@ -30,6 +30,8 @@ local rControllerIndex= 2
 
 local rGrabActive =false
 local lGrabActive =false
+local rGrabWasPressed=false
+local lGrabWasPressed=false
 local LZone=0
 
 local lThumbSwitchState= 0
@@ -45,6 +47,7 @@ local inMenu=false
 
 local isDpadLeft=false
 local isDpadRight=false
+local isSelect=false
 local function isButtonPressed(state, button)
 	return state.Gamepad.wButtons & button ~= 0
 end
@@ -57,6 +60,7 @@ end
 local function unpressButton(state, button)
 	state.Gamepad.wButtons = state.Gamepad.wButtons & ~(button)
 end
+
 uevr.sdk.callbacks.on_xinput_get_state(
 function(retval, user_index, state)
 
@@ -222,11 +226,13 @@ function(retval, user_index, state)
 	if rShoulder then
 		rGrabActive= true
 	else rGrabActive =false
+		rGrabWasPressed=false
 	end
 	if lShoulder  then
 		lGrabActive =true
 		--unpressButton(state, XINPUT_GAMEPAD_LEFT_SHOULDER)
 	else lGrabActive=false
+		lGrabWasPressed=false
 	end
 	
 	if isRhand then
@@ -275,6 +281,10 @@ end
 if isDpadRight  then
 	pressButton(state,XINPUT_GAMEPAD_DPAD_RIGHT)
 	isDpadRight=false
+end
+if isSelect then
+	pressButton(state,XINPUT_GAMEPAD_BACK)
+	isSelect=false
 end
 	--local VecA= Vector3f.new(x,y,z)
 	--	print(VecA.x)
@@ -422,7 +432,7 @@ if HolstersActive then
 		RZone=2--Left Shoulder
 		
 	elseif RCheckZone(0, 20, -5, 5, 0, 20)  then
-		isHapticZoneR= false
+		isHapticZoneR= true
 		RZone=3-- Over Head
 		
 	elseif RCheckZone(-100,-60,5,50,-10,30)   then
@@ -458,7 +468,7 @@ if HolstersActive then
 	end
 	--define Haptic zone Lhandx Z: UP/DOWN, Y:RIGHT LEFT, X FORWARD BACKWARD, checks if RHand is in RZone
 	if LCheckZone(-10, 15, 10, 30, -10, 20) then
-		isHapticZoneL =true
+		isHapticZoneL =false
 		LZone=1-- RShoulder
 		
 	elseif LCheckZone (-10, 15, -30, -10, -10, 20) then
@@ -466,7 +476,7 @@ if HolstersActive then
 		LZone=2--Left Shoulder
 		
 	elseif LCheckZone(0, 30, -5, 5, 0, 20) then
-		isHapticZoneL= false
+		isHapticZoneL= true
 		LZone=3-- Over Head
 		
 	elseif LCheckZone(-100,-60,22,50,-10,10)  then
@@ -474,15 +484,15 @@ if HolstersActive then
 		LZone=4--RPouch
 		
 	elseif LCheckZone(-100,-45,-50,-20,-10,40)  then
-		isHapticZoneL= true
+		isHapticZoneL= false
 		LZone=5--LPouch
 		
 	elseif LCheckZone(-30,-20,-15,-5,0,10)   then
-		isHapticZoneL= true
+		isHapticZoneL= false
 		LZone=6--ChestLeft
 		
 	elseif LCheckZone(-30,-20,5,15,0,10)  then
-		isHapticZoneL= true
+		isHapticZoneL= false
 		LZone=7--ChestRight
 		
 	elseif LCheckZone(-100,-50,-20,20,-30,-15) then
@@ -547,9 +557,13 @@ if isDriving==false then
 		elseif RZone== 4 and rGrabActive then
 			pawn:EquipSlot2()
 		elseif RZone== 3 and rGrabActive then
-			--pawn:ToggleNightvisionGoggles()
+			if rGrabWasPressed == false then
+			pawn:ToggleHeadTorch()
+			end
 		elseif LZone== 3 and lGrabActive then
-			--pawn:ToggleNightvisionGoggles()
+			if lGrabWasPressed == false then
+			pawn:ToggleHeadTorch()
+			end
 		elseif RZone== 5 and rGrabActive then
 			--pawn:EquipCSGas()
 		elseif RZone== 6 and rGrabActive then
@@ -557,7 +571,9 @@ if isDriving==false then
 		elseif RZone== 7 and rGrabActive then
 			pawn:EquipSlot4()
 		elseif LZone==2 and lGrabActive then
-			--pawn:EquipLongTactical()
+			if lGrabWasPressed==false then
+				isSelect=true
+			end
 		elseif LZone==5 and lGrabActive then
 			--pawn.InventoryComp:EquipItemFromGroup_Index(1,1)
 		elseif LZone==6 and lGrabActive then

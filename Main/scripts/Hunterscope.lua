@@ -12,7 +12,7 @@ local api = uevr.api
 local vr = uevr.params.vr
 
 local emissive_material_amplifier = 2.0 
-local fov = 15.0
+local fov = 18.0
 
 -- Static variables
 local emissive_mesh_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"
@@ -334,6 +334,7 @@ local function spawn_reticle_plane(world, owner, pos, tex)
 	--local dynamic_texture = wanted_tex:CreateTransient(100,100
 
 	CurrentScope=Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm())
+		pcall(function()
 		if string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Scope01") or string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Collimator01") then
 			wanted_tex= api:find_uobject(sightTexture_name)
 			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
@@ -353,6 +354,7 @@ local function spawn_reticle_plane(world, owner, pos, tex)
 			wanted_tex= api:find_uobject(sightTexture_name6)
 			dynamic_materialReticle:SetTextureParameterValue("LinearColor", wanted_tex)
 		end
+		end)
 		if wanted_tex == nil then
         print("Failed to find Reticle Texture2D")
         return
@@ -459,6 +461,7 @@ end
 
 local scope_mesh = nil
 local last_scope_state = false
+
 
 local function attach_components_to_weapon(weapon_mesh)
     if not weapon_mesh then return end
@@ -656,8 +659,8 @@ end
 
 local current_weapon = nil
 local last_level = nil
-
-
+local weapon_mesh=nil
+local weapon_Obj=nil
 
 --ReDo proper FOV CHANGE based on eye to scope distance
 local function Get_ScopeHmdDistance()
@@ -695,7 +698,7 @@ end
 
 local function AdjustSceneComponentAngle(c_pawn)
 	local ReturnAngle
-	if c_pawn ~=nil then
+	if c_pawn ~=nil and not string.find(Get_Scope_Object(c_pawn:GetCurrentArm()):get_fname():to_string(),"Collimator")then
 		if	c_pawn:GetCurrentArm() ~=nil then		
 				local RearsightX=Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).m_rearFixedPointOffset.X
 				local FrontsightX=Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).m_frontFixedPointOffset.X
@@ -707,8 +710,19 @@ local function AdjustSceneComponentAngle(c_pawn)
 	scene_capture_component:K2_SetRelativeRotation(temp_vec3:set(ReturnAngle*180/math.pi, 0, 90), false, reusable_hit_result, false)
 end
 
+local function UpdateReticleDistance(c_pawn)
+	pcall(function()
+	if string.find(Get_Scope_Object(c_pawn:GetCurrentArm()):get_fname():to_string(),"Collimator") then
+		local range= Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).m_rangeDistance
+		reticle_plane_component:K2_SetRelativeLocation(temp_vec3:set(range, 0, 1.5), false, reusable_hit_result, false)
+		reticle_plane_component:SetWorldScale3D(temp_vec3:set(0.03*range/100,0.03*range/100, 0.00001))
+	end
+	end)
+end
+
 local function UpdateReticleVisibility()
-	if current_scope_state == true then
+pcall(function()
+	if current_scope_state == true and string.find(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string(),"Collimator") then
 		local HmdPos= hmd_component:K2_GetComponentLocation()
 		local ReticlePos= reticle_plane_component:K2_GetComponentLocation()
 		local ScopePos=  Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).FP_Scope:K2_GetComponentLocation()
@@ -725,8 +739,8 @@ local function UpdateReticleVisibility()
 		local LFactor= math.sqrt(Vec1TempX^2 +Vec1TempY^2+ Vec1TempZ^2)* math.sqrt(Vec2TempX^2+ Vec2TempY^2+ Vec2TempZ^2)
 		local Alpha= math.acos(ScalarTemp/LFactor)
 		local Range= Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()).m_rangeDistance
-		local AlphaMax= 0.0020 -- 2/180*math.pi --math.atan(2.5/ Range)
-		local AlphaMin= 0.0014
+		local AlphaMax= 0.0020/(Range/2500) -- 2/180*math.pi --math.atan(2.5/ Range)
+		local AlphaMin= 0.0014/(Range/2500)
 		
 		print("Alpha: ".. Alpha .. "   AlphaMax: " .. AlphaMax)
 		if math.abs(Alpha)<= AlphaMax and math.abs(Alpha)>= AlphaMin then
@@ -735,8 +749,15 @@ local function UpdateReticleVisibility()
 			reticle_plane_component:SetVisibility(false)
 		end
 	end
+end)
+	if isDriving then
+		pcall(function()
+		reticle_plane_component:SetVisibility(false)
+		end)
+	end
 end
 		
+local PreUnequipWpn=nil
 
 uevr.sdk.callbacks.on_pre_engine_tick(
 	function(engine, delta)
@@ -765,17 +786,47 @@ uevr.sdk.callbacks.on_pre_engine_tick(
         -- reset_scope_actor_if_deleted()
         local c_pawn = api:get_local_pawn(0)
 		
-		local weapon_mesh=nil
-        local weapon_Obj = c_pawn.m_currentEquipment --:GetCurrentArm()--get_equipped_weapon(c_pawn)
+		weapon_mesh=nil
+        weapon_Obj = c_pawn.m_currentEquipment --:GetCurrentArm()--get_equipped_weapon(c_pawn)
+		
+		
 		if weapon_Obj ~= nil then
 			weapon_mesh=weapon_Obj.m_meshFirstPerson
 			weapon_mesh_attach=weapon_Obj.m_mesh
 		end
-		UEVR_UObjectHook.remove_motion_controller_state(current_weapon_attach)
+	--	pcall(function()
+	--	print("wpn "..weapon_Obj:get_fname():to_string())
+	--	
+	--	end)
+	--
+	--	pcall(function()
+	--		print("curr "..current_Obj:get_fname():to_string())
+	--	end)
+	--	pcall(function()
+	--	print("pre "..PreUnequipWpn:get_fname():to_string())
+	--	end)
+	--	print("   ")
 		
+		if weapon_Obj ~= current_Obj and weapon_Obj ~=nil then
+		pcall(function()
+				UEVR_UObjectHook.get_or_add_motion_controller_state(current_weapon_attach):set_hand(2)
+				UEVR_UObjectHook.get_or_add_motion_controller_state(current_weapon_attach):set_location_offset(Vector3f.new (-100.7699999809265137,-8.020000457763672,-111.579999923706055))
+				UEVR_UObjectHook.get_or_add_motion_controller_state(current_weapon_attach):set_permanent(false)
+		end)
+		elseif weapon_Obj==nil then
+		pcall(function()
+				UEVR_UObjectHook.get_or_add_motion_controller_state(PreUnequipWpn.m_mesh):set_hand(2)
+				UEVR_UObjectHook.get_or_add_motion_controller_state(PreUnequipWpn.m_mesh):set_location_offset(Vector3f.new (-100.7699999809265137,-8.020000457763672,-111.579999923706055))
+				UEVR_UObjectHook.get_or_add_motion_controller_state(PreUnequipWpn.m_mesh):set_permanent(false)
+		end)		
+		end
+		if weapon_Obj ~=nil then
+		pcall(function()
 		UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh_attach):set_location_offset(Vector3f.new (-0.7699999809265137,-8.020000457763672,17.579999923706055))
 		UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh_attach):set_permanent(true)
-		current_weapon_attach=weapon_mesh_attach
+		UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh_attach):set_hand(1)
+		end)
+		end
         if weapon_mesh then
             -- fix_materials(weapon_mesh)
             local weapon_changed = not current_weapon or weapon_mesh.AnimScriptInstance ~= current_weapon.AnimScriptInstance
@@ -785,11 +836,17 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 print("Previous weapon: " .. (current_weapon and current_weapon:get_fname():to_string() or "none"))
                 print("New weapon: " .. weapon_mesh:get_fname():to_string())
                 
-				UEVR_UObjectHook.remove_motion_controller_state(current_weapon_attach)
-				UEVR_UObjectHook.remove_motion_controller_state(weapon_mesh_attach)
+		
                 -- Update current weapon reference
-                current_weapon = weapon_mesh
-                current_weapon_attach=weapon_mesh_attach
+				--pcall(function()
+				PreUnequipWpn=current_Obj
+				current_weapon_attach=weapon_mesh_attach
+				current_weapon = weapon_mesh
+				current_Obj=weapon_Obj
+				
+			--	end)
+		
+               
                 -- Attempt to attach components
                 spawn_scope(engine, c_pawn)
                 attach_components_to_weapon(weapon_mesh)
@@ -801,10 +858,12 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 current_weapon = nil
                 scope_mesh = nil
                 last_scope_state = false
+				UEVR_UObjectHook.get_or_add_motion_controller_state(current_Obj.m_mesh):set_hand(2)
+				UEVR_UObjectHook.get_or_add_motion_controller_state(current_Obj.m_mesh):set_location_offset(Vector3f.new (-100.7699999809265137,-8.020000457763672,-111.579999923706055))
+				UEVR_UObjectHook.get_or_add_motion_controller_state(current_Obj.m_mesh):set_permanent(false)
             end
         end
-		
-		
+	
         switch_scope_state(c_pawn)
 		pcall(function()
 			Recalculate_FOV(c_pawn)
@@ -816,16 +875,21 @@ uevr.sdk.callbacks.on_pre_engine_tick(
 		UpdateReticleTexture()
 		end)
 		UpdateReticleVisibility()
+		UpdateReticleDistance(c_pawn)
 		--print(Get_Scope_Object(api:get_local_pawn(0):GetCurrentArm()):get_fname():to_string())
 	--	fov= 1/(0.2*((c_pawn:GetCurrentArm().m_attachments[2].ZoomLevelIndex)+1))
 	--	
 	--	scene_capture_component.FOVAngle = fov
-	if c_pawn:IsHoldingBreath() then
-		uevr.params.vr.set_mod_value("UObjectHook_AttachLerpSpeed" , "2.000000")
-	else 
-		uevr.params.vr.set_mod_value("UObjectHook_AttachLerpSpeed" , "15.000000")
-	end
 	
+	if isDriving==false then
+		pcall(function()
+		if c_pawn:IsHoldingBreath() then
+			uevr.params.vr.set_mod_value("UObjectHook_AttachLerpSpeed" , "2.000000")
+		else 
+			uevr.params.vr.set_mod_value("UObjectHook_AttachLerpSpeed" , "15.000000")
+		end
+		end)
+	end
 	
 	
 	

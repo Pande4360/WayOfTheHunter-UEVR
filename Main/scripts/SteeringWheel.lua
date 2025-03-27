@@ -28,6 +28,18 @@ local DiffAngleRight=0
 local DiffAngleLeft=0
 local Tick=0
 
+local function isButtonPressed(state, button)
+	return state.Gamepad.wButtons & button ~= 0
+end
+local function isButtonNotPressed(state, button)
+	return state.Gamepad.wButtons & button == 0
+end
+local function pressButton(state, button)
+	state.Gamepad.wButtons = state.Gamepad.wButtons | button
+end
+local function unpressButton(state, button)
+	state.Gamepad.wButtons = state.Gamepad.wButtons & ~(button)
+end
 
 local function UpdateHandState()
 	
@@ -97,9 +109,9 @@ local function UpdateInput(state)
 end
 
 local function Drive(state)
-	print(CurrentHandRoll_Left)
-	print(ActiveHandState)
-	print("  ")
+	--print(CurrentHandRoll_Left)
+	--print(ActiveHandState)
+	--print("  ")
 	if isDriving then
 		--state.Gamepad.sThumbLX = 0
 		--state.Gamepad.sThumbRX = 0
@@ -137,6 +149,13 @@ if isDriving and PhysicalDriving then
 	Drive(state)
 end
 
+if isMenu == false then
+	unpressButton(state,XINPUT_GAMEPAD_LEFT_SHOULDER)
+	unpressButton(state,XINPUT_GAMEPAD_LEFT_THUMB)
+	if lShoulder then
+		pressButton(state,XINPUT_GAMEPAD_LEFT_THUMB)
+	end
+end
 end)
 
 
@@ -195,17 +214,18 @@ if	isDriving==false then
 		--uevr.params.vr.set_mod_value("VR_ControllerPitchOffset", FinalAngle)
 		local Cpawn=api:get_local_pawn(0)
 		if isDriving==false then
-			
+			pcall(function()
 			local pawn_pos = Cpawn.RootComponent:K2_GetComponentLocation()
 			
 			position.x = pawn_pos.x 
 			position.y = pawn_pos.y
 			position.Z = pawn_pos.z + 70-- +5
+			end)
 		else
 			
 			
 			
 		end
-	print(isDriving)
+	--print(isDriving)
 end
 end)

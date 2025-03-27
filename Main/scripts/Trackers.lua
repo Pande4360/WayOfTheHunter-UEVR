@@ -1,11 +1,23 @@
-require("UEHelper")
+--require("UEHelper")
 	local api = uevr.api
 	
 	local params = uevr.params
 	local callbacks = params.sdk.callbacks
 	local pawn = api:get_local_pawn(0)
 	--local vr=uevr.params.vr
+local function find_required_object(name)
+    local obj = uevr.api:find_uobject(name)
+    if not obj then
+        error("Cannot find " .. name)
+        return nil
+    end
 
+    return obj
+end
+local function find_static_class(name)
+    local c = find_required_object(name)
+    return c:get_class_default_object()
+end
 local kismet_string_library = find_static_class("Class /Script/Engine.KismetStringLibrary")
 local kismet_math_library = find_static_class("Class /Script/Engine.KismetMathLibrary")
 local kismet_system_library = find_static_class("Class /Script/Engine.KismetSystemLibrary")

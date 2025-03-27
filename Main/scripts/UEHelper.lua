@@ -1,3 +1,4 @@
+
 local api = uevr.api
 	
 	local params = uevr.params
@@ -92,8 +93,14 @@ end
  Bbutton = false
  Xbutton = false
  Ybutton = false
+ SelectButton=false
 
 isDriving=false
+isMenu=false
+
+local GameTime= 0
+
+
 
 function UpdateInput(state)
 
@@ -114,16 +121,32 @@ function UpdateInput(state)
 	Ybutton  = isButtonPressed(state, XINPUT_GAMEPAD_Y)
 end
 
-uevr.sdk.callbacks.on_xinput_get_state(
-function(retval, user_index, state)
-local pawn=nil
-pawn=api:get_local_pawn(0)
+local function UpdateDriveStatus(pawn)
 	if pawn.AdjustedSteeringInput ~=nil then
 		isDriving=true
 		uevr.params.vr.set_mod_value("VR_AimMethod" , "0")
 	else isDriving=false
 		uevr.params.vr.set_mod_value("VR_AimMethod" , "2")
 	end
+end
+
+local function UpdateMenuStatus(Player)
+	if Player.bShowMouseCursor then
+		isMenu=true
+	end
+end
+
+
+
+uevr.sdk.callbacks.on_xinput_get_state(
+function(retval, user_index, state)
+local dpawn=nil
+dpawn=api:get_local_pawn(0)
+
+
+	UpdateDriveStatus(dpawn)
+	
+	
 
 --Read Gamepad stick input 
 if PhysicalDriving then
@@ -131,4 +154,13 @@ if PhysicalDriving then
 
 end
 
+end)
+
+uevr.sdk.callbacks.on_pre_engine_tick(
+	function(engine, delta)
+	
+local Player=api:get_player_controller(0)	
+UpdateMenuStatus(Player)
+	
+	
 end)
