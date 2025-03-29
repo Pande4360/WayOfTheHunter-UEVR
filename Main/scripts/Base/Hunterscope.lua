@@ -1,13 +1,7 @@
---Custom Stuff
---
---weapon mesh path, ll.457
---the scope mesh path or a location as to where you wanna spawn it
---scope size ll. 394
---scope activate condition, ll. 399+
---Camera Manager ll. 116
---ScopeMesh or location as to where to attach scope, ll 378
---
-require("Trackers")
+require(".\\Base\\Subsystems\\Trackers")
+require(".\\Config\\CONFIG")
+require(".\\Base\\Subsystems\\UEHelper")
+
 local api = uevr.api
 local vr = uevr.params.vr
 
@@ -54,7 +48,7 @@ local temp_vec3f = Vector3f.new(0, 0, 0)
 local zero_color = nil
 local zero_transform = nil
 
-local current_scope_state= false
+
 local wanted_tex=nil
 
 local function find_required_object(name)
@@ -523,7 +517,7 @@ local function attach_components_to_weapon(weapon_mesh)
 				true -- Weld simulated bodies
 			)
 			reticle_plane_component:K2_SetRelativeRotation(temp_vec3:set(0, 90, 90), false, reusable_hit_result, false)
-			reticle_plane_component:K2_SetRelativeLocation(temp_vec3:set(-14.4, 0, 0), false, reusable_hit_result, false)
+			reticle_plane_component:K2_SetRelativeLocation(temp_vec3:set(-14.24, 0, 0), false, reusable_hit_result, false)
 			reticle_plane_component:SetWorldScale3D(temp_vec3:set(0.03,0.03, 0.00001))
 			reticle_plane_component:SetVisibility(false)
 		end
@@ -822,9 +816,24 @@ uevr.sdk.callbacks.on_pre_engine_tick(
 		end
 		if weapon_Obj ~=nil then
 		pcall(function()
+
+		
 		UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh_attach):set_location_offset(Vector3f.new (-0.7699999809265137,-8.020000457763672,17.579999923706055))
 		UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh_attach):set_permanent(true)
+	if string.find(weapon_Obj:get_fname():to_string(), "Bino") then
+		UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh_attach):set_hand(0)
+		UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh_attach):set_rotation_offset(Vector3f.new (0,0,0))
+		if current_scope_state then
+			uevr.params.vr.set_mod_value("VR_AimMethod" , "3")
+		else
+			uevr.params.vr.set_mod_value("VR_AimMethod" , "2")
+		end
+	else
 		UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh_attach):set_hand(1)
+		UEVR_UObjectHook.get_or_add_motion_controller_state(weapon_mesh_attach):set_rotation_offset(Vector3f.new (0,0,0))
+		uevr. qparams.vr.set_mod_value("VR_AimMethod" , "2")
+	end
+	
 		end)
 		end
         if weapon_mesh then

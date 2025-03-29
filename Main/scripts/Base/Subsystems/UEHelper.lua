@@ -75,7 +75,8 @@ local function unpressButton(state, button)
 end
 --
 
-
+--GLOBAL VARIABLES
+current_scope_state=false
 
 
 --Dynamic helper functions:
@@ -133,6 +134,7 @@ end
 local function UpdateMenuStatus(Player)
 	if Player.bShowMouseCursor then
 		isMenu=true
+	else isMenu=false
 	end
 end
 

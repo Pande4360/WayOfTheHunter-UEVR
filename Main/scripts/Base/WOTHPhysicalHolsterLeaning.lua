@@ -1,6 +1,6 @@
-require("CONFIG")
-require("UEHelper")
-require("Trackers")
+require(".\\Base\\Subsystems\\Trackers")
+require(".\\Config\\CONFIG")
+require(".\\Base\\Subsystems\\UEHelper")
 --CONFIG--
 --------	
 	--local isRhand = true							--right hand config
@@ -288,7 +288,16 @@ if isSelect then
 end
 	--local VecA= Vector3f.new(x,y,z)
 	--	print(VecA.x)
-	
+
+--sprinting 
+if isMenu == false and current_scope_state==false then
+	unpressButton(state,XINPUT_GAMEPAD_LEFT_SHOULDER)
+	unpressButton(state,XINPUT_GAMEPAD_LEFT_THUMB)
+	if lShoulder then
+		pressButton(state,XINPUT_GAMEPAD_LEFT_THUMB)
+	end
+end
+
 end)
 
 
@@ -488,7 +497,7 @@ if HolstersActive then
 		LZone=5--LPouch
 		
 	elseif LCheckZone(-30,-20,-15,-5,0,10)   then
-		isHapticZoneL= false
+		isHapticZoneL= true
 		LZone=6--ChestLeft
 		
 	elseif LCheckZone(-30,-20,5,15,0,10)  then
@@ -563,21 +572,23 @@ if isDriving==false then
 		elseif LZone== 3 and lGrabActive then
 			if lGrabWasPressed == false then
 			pawn:ToggleHeadTorch()
+			lGrabWasPressed=true
 			end
 		elseif RZone== 5 and rGrabActive then
 			--pawn:EquipCSGas()
 		elseif RZone== 6 and rGrabActive then
 			--pawn:EquipStinger()	
 		elseif RZone== 7 and rGrabActive then
-			pawn:EquipSlot4()
+			--pawn:EquipSlot4()
 		elseif LZone==2 and lGrabActive then
 			if lGrabWasPressed==false then
 				isSelect=true
+				lGrabWasPressed=true
 			end
 		elseif LZone==5 and lGrabActive then
 			--pawn.InventoryComp:EquipItemFromGroup_Index(1,1)
 		elseif LZone==6 and lGrabActive then
-			--isTablet = true
+			pawn:EquipSlot4()
 		end
 	else 
 		if LZone == 2 and lGrabActive then

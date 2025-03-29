@@ -1,6 +1,6 @@
-require("UEHelper")
-require("CONFIG")
-require("Trackers")
+require(".\\Base\\Subsystems\\Trackers")
+require(".\\Config\\CONFIG")
+require(".\\Base\\Subsystems\\UEHelper")
 local api = uevr.api
 local vr = uevr.params.vr
 
@@ -149,13 +149,7 @@ if isDriving and PhysicalDriving then
 	Drive(state)
 end
 
-if isMenu == false then
-	unpressButton(state,XINPUT_GAMEPAD_LEFT_SHOULDER)
-	unpressButton(state,XINPUT_GAMEPAD_LEFT_THUMB)
-	if lShoulder then
-		pressButton(state,XINPUT_GAMEPAD_LEFT_THUMB)
-	end
-end
+
 end)
 
 
